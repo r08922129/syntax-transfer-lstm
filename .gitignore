@@ -1,0 +1,6 @@
+data
+.ipynb_checkpoints
+.vscode
+lstm.ipynb
+preprocess.ipynb
+split_data.ipynb
