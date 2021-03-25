@@ -4,3 +4,6 @@ data
 lstm.ipynb
 preprocess.ipynb
 split_data.ipynb
+Untitled.ipynb
+src/__pycache__/
+src/utils/__pycache__/
