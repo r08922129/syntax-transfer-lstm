@@ -7,16 +7,6 @@ from functools import reduce
 import re
 import argparse
 
-parser = argparse.ArgumentParser()
-parser.add_argument("--collect_symbol", action="store_true")
-parser.add_argument("--symbol_output")
-
-parser.add_argument("--reduce_tree", action="store_true")
-parser.add_argument("--reduce_level", type=int)
-parser.add_argument("--reduce_output")
-
-args = parser.parse_args()
-
 def reduceTree(output, level=None):
     '''If level is None, return full tree without terminal words'''
     out = []
@@ -79,7 +69,7 @@ def preprocessCoreNLPTree(mapping):
                 out[symbol].append(child)
     return out
 
-def collectSymbols(sample, cnf=False):
+def collectRHS(sample, cnf=False):
 
     def dfs(root, sample):
         if root not in sample:
@@ -100,7 +90,7 @@ def collectSymbols(sample, cnf=False):
 
     return out
 
-def collectSymbolsFromDataset(outputFile, cnf=False):
+def collectRHSFromDataset(outputFile, cnf=False):
 
     out = set()
     for file in sys.stdin.readlines():
@@ -116,9 +106,56 @@ def collectSymbolsFromDataset(outputFile, cnf=False):
             f.write("{}\n".format(symbol))
     return list(out)
 
+def collectSymbols(sample, cnf=False):
+
+    def dfs(root, sample):
+        if root not in sample:
+            return Tree(root, [])
+        else:
+            return Tree(root, [dfs(child, sample) for child in sample[root]])
+
+    tree = dfs("ROOT", sample)
+    if cnf:
+        Tree.chomsky_normal_form(tree)
+
+    out = set()
+    for production in tree.productions():
+        lhs, rhs = production.lhs(), production.rhs()
+        if rhs:
+            for nonterminal in rhs:
+                out.add(re.sub(r"-\d+", '', nonterminal.symbol()))
+
+    return out
+
+def collectSymbolsFromDataset(outputFile, cnf=False):
+
+    out = set()
+    for file in sys.stdin.readlines():
+        file = file.strip()
+        with open(file) as f:
+            for line in f.readlines():
+                sample = json.loads(line)
+                out.update(collectSymbols(sample, cnf))
+
+    with open(outputFile, "w") as f:
+        f.write("[END]\n")
+        f.write("ROOT\n")
+        for i, symbol in enumerate(list(out), 1):
+            f.write("{}\n".format(symbol))
+    return list(out)
+
 
 if __name__ == "__main__":
 
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--collect_symbol", action="store_true")
+    parser.add_argument("--symbol_output")
+
+    parser.add_argument("--reduce_tree", action="store_true")
+    parser.add_argument("--reduce_level", type=int)
+    parser.add_argument("--reduce_output")
+
+    args = parser.parse_args()
     # remove terminal words
     # args:
     # 
