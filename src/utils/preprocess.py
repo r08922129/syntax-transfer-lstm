@@ -5,7 +5,47 @@ import sys
 from nltk import Tree
 from functools import reduce
 import re
+import argparse
 
+parser = argparse.ArgumentParser()
+parser.add_argument("--collect_symbol", action="store_true")
+parser.add_argument("--symbol_output")
+
+parser.add_argument("--reduce_tree", action="store_true")
+parser.add_argument("--reduce_level", type=int)
+parser.add_argument("--reduce_output")
+
+args = parser.parse_args()
+
+def reduceTree(output, level=None):
+    '''If level is None, return full tree without terminal words'''
+    out = []
+    for line in sys.stdin.readlines():
+        sample = preprocessCoreNLPTree(json.loads(line))
+
+        if level:
+            sample = reduceTreeLevel(sample, level)
+
+        out.append(json.dumps(sample)+'\n')
+
+    with open(output, 'w') as f:
+        f.writelines(out)
+
+def reduceTreeLevel(sample, level):
+    
+    def dfs(root, sample, out, level):
+
+        if level and root in sample:
+            out[root] = []
+            for child in sample[root]:
+                out[root].append(child)
+                dfs(child, sample, out, level-1)
+
+    new_sample = {}
+    dfs("ROOT", sample, new_sample, level)
+    return new_sample
+
+    
 def preprocessCoreNLPTree(mapping):
 
     '''If a non-terminal symbol's right-hand-side is a terminal word, it won't be
@@ -37,7 +77,7 @@ def preprocessCoreNLPTree(mapping):
             out[symbol] = []
             for child in mapping[symbol]:
                 out[symbol].append(child)
-    return json.dumps(out)
+    return out
 
 def collectSymbols(sample, cnf=False):
 
@@ -60,14 +100,16 @@ def collectSymbols(sample, cnf=False):
 
     return out
 
-def collectSymbolsFromDataset(files, outputFile, cnf=False):
+def collectSymbolsFromDataset(outputFile, cnf=False):
 
     out = set()
-    for file in files:
+    for file in sys.stdin.readlines():
+        file = file.strip()
         with open(file) as f:
             for line in f.readlines():
                 sample = json.loads(line)
                 out.update(collectSymbols(sample, cnf))
+
     with open(outputFile, "w") as f:
         f.write("ROOT\n")
         for i, symbol in enumerate(list(out), 1):
@@ -78,16 +120,14 @@ def collectSymbolsFromDataset(files, outputFile, cnf=False):
 if __name__ == "__main__":
 
     # remove terminal words
-    # for line in sys.stdin.readlines():
-    #     print(preprocessCoreNLPTree(json.loads(line)))
+    # args:
+    # 
+    if args.reduce_tree:
+        if args.reduce_level:
+            reduceTree(args.reduce_output, args.reduce_level)
+        else:
+            reduceTree(args.reduce_output)
 
     # generate set of symbols
-    files = [
-        "syntax_data/QQPPos/train/train-src",
-        "syntax_data/QQPPos/train/train-ref",
-        "syntax_data/QQPPos/val/val-src",
-        "syntax_data/QQPPos/val/val-ref",
-        "syntax_data/QQPPos/test/test-src",
-        "syntax_data/QQPPos/test/test-ref",
-    ]
-    collectSymbolsFromDataset(files, "symbols")
+    if args.collect_symbol:
+        collectSymbolsFromDataset(args.symbol_output)

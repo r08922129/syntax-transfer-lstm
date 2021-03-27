@@ -23,4 +23,13 @@ if __name__ == "__main__":
         pathToReference="syntax_data/QQPPos/train/train-ref",
         symbols=symbols,
     )
-    
+    valDataset = SyntaxMappingDataset(
+        pathToSource="syntax_data/QQPPos/val/val-src",
+        pathToReference="syntax_data/QQPPos/val/val-ref",
+        symbols=symbols,
+    )
+    testDataset = SyntaxMappingDataset(
+        pathToSource="syntax_data/QQPPos/test/test-src",
+        pathToReference="syntax_data/QQPPos/test/test-ref",
+        symbols=symbols,
+    )
