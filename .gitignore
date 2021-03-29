@@ -11,3 +11,4 @@ save
 symbol_file
 syntax_data
 save/symbols
+src/model/__pycache__/

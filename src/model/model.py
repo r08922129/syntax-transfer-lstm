@@ -4,19 +4,20 @@ from src.utils.preprocess import collectSymbols
 import re
 import torch.nn as nn
 import torch
+from math import sqrt
 
 class SymbolEmbedding(nn.Module):
     
     def __init__(self, symbols, embedding_dim):
         super(SymbolEmbedding, self).__init__()
-        self.embedding = nn.Embedding(len(symbols), embedding_dim)
+        self.embedding = nn.Embedding(len(symbols), embedding_dim, sparse=True).requires_grad_(False)
         self.symbolIndex = {
             symbol : torch.tensor(index) for index, symbol in enumerate(symbols)
         }
         self.root_embedding = self.embedding(self.symbolIndex["ROOT"])
 
     def get_embedding(self, symbol):
-        return self.embedding(self.symbolIndex[symbol])
+        return self.embedding(self.symbolIndex[symbol].to(self.embedding.weight.device))
 
 class TreeLSTMCell(nn.Module):
     
@@ -48,9 +49,9 @@ class TreeLSTMCell(nn.Module):
         
         f = self.U_f(h).view(h.size(0), self.n_ary, self.hidden_dim) # (batch, n_ary * hidden)
         f = f + self.W_f(input).expand(self.n_ary, h.size(0), self.hidden_dim).transpose(0, 1)
-        f = torch.sigmoid(f) # (batcj, n_ary, hidden_dim)
+        f = torch.sigmoid(f) # (batch, n_ary, hidden_dim)
 
-        c = i * u + torch.sum(f * c.view(-1, self.n_ary, self.hidden_dim))
+        c = i * u + torch.sum(f * c.view(-1, self.n_ary, self.hidden_dim), 1)
         h = o * torch.tanh(c)
 
         return h, c    
@@ -99,9 +100,9 @@ class SyntaxTransferEncoder(nn.Module):
             return h, c
 
         else:
-
-            h = torch.zeros(1, self.n_ary * self.hidden_dim) # (batch = 1, n_ary * embedding_dim)
-            c = torch.zeros(1, self.n_ary * self.hidden_dim)
+            cuda = self.h0_bottom_up.device
+            h = torch.zeros(1, self.n_ary * self.hidden_dim).to(cuda) # (batch = 1, n_ary * embedding_dim)
+            c = torch.zeros(1, self.n_ary * self.hidden_dim).to(cuda)
 
             for i, child in enumerate(syntax[node]):
                 sub_h, sub_c = self.dfsBottomUp(child, syntax, embeddings, out_h, out_c)
@@ -145,13 +146,13 @@ class SyntaxTransferDecoder(nn.Module):
         out = []
         self.dfsTopDown("ROOT", syntax, encoder_h, (encoder_h[:,-1,:], encoder_c[:,-1,:]), embeddings, self.level, out)
         out = torch.stack(out).transpose(0, 1)
-        
+
         return out
 
     def dfsTopDown(self, node, syntax, encoder_hiddens, last_hidden, embeddings, level, out):
         
         if level and node in syntax:
-            print(node)
+
             node_lemma = re.sub(r"-\d+", '', node)
             node_embedding = embeddings.get_embedding(node_lemma).view(1, -1)
             h, c = self.LSTMCell(node_embedding, last_hidden)
@@ -164,7 +165,8 @@ class SyntaxTransferDecoder(nn.Module):
             h = torch.cat([h, attention], dim=1)
             h = self.linear(h)
             for i in range(self.n_ary):
-                position_embedding = self.n_ary_position_embeddings(torch.tensor(i))
+                position = torch.tensor(i).to(self.n_ary_position_embeddings.weight.device)
+                position_embedding = self.n_ary_position_embeddings(position)
                 out.append(h + position_embedding)
 
             for i, child in enumerate(syntax[node]):
@@ -176,16 +178,37 @@ class SyntaxTransferEncoderDecoder(nn.Module):
     def __init__(self, symbols, embedding_dim=256, hidden_dim=256, n_ary=4, decode_level=2):
     
         super(SyntaxTransferEncoderDecoder, self).__init__()
+
         self.decode_level = decode_level
         self.embeddings = SymbolEmbedding(symbols, embedding_dim)
         self.encoder = SyntaxTransferEncoder(embedding_dim, hidden_dim)
         self.decoder = SyntaxTransferDecoder(embedding_dim, hidden_dim, n_ary, level=decode_level)
         self.linear = nn.Linear(hidden_dim, len(symbols))
 
+        # init parameters
+        for weight in self.encoder.parameters():
+            nn.init.uniform_(weight, -sqrt(1/hidden_dim), sqrt(1/hidden_dim))
+
+        for weight in self.decoder.parameters():
+            nn.init.uniform_(weight, -sqrt(1/hidden_dim), sqrt(1/hidden_dim))
+
+        # for param in self.encoder.parameters():
+        #     param.requires_grad_(False)
+
     def forward(self, source_syntax, target_syntax):
 
+        '''
+        Return:
+            hiddens:
+                The decoder will traverse each node in the graph until the specific level reached.
+                Each node will be expanded to n_ary nodes so the shape of hiddens will be
+                the number of node expanded * n_ary
+
+                shape:
+                    batch, number of node expanded * n_ary, number of symbols
+        '''
         h, c = self.encoder(source_syntax, self.embeddings)
-        hiddens = self.decoder(target_syntax, (h, c), self.embeddings) # (batch, number of nodes, hiddens)
-        hiddens = self.linear(hiddens) # (batch, number of nodes, number of symbols)
+        hiddens = self.decoder(target_syntax, (h, c), self.embeddings)
+        hiddens = self.linear(hiddens) # (batch, number of nodes expanded * n_ary, number of symbols)
 
         return hiddens
