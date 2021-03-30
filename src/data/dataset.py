@@ -25,6 +25,8 @@ class SyntaxMappingDataset(Dataset):
         self.symbolIndex = {
             symbol : i for i, symbol in enumerate(symbols)
         }
+        self.decode_level = decode_level
+        self.counts = None
         if self.symbolIndex["[END]"] != 0:
             raise Exception("Symbol [END] must have index 0.")
         self.samplePairs = []
@@ -40,15 +42,17 @@ class SyntaxMappingDataset(Dataset):
                 samplePair = {}
                 samplePair["source"] = {
                     "syntax" : source,
-                    "label" : []
+                    "label" : [],
+                    "level": []
                 }
                 samplePair["reference"] = {
                     "syntax" : reference,
-                    "label" : []
+                    "label" : [],
+                    "level": []
                 }
                 self.samplePairs.append(samplePair)
 
-        self.generateLabel(decode_level, n_ary)
+        self._generateLabel(decode_level, n_ary)
 
     def __len__(self):
         return len(self.samplePairs)
@@ -56,12 +60,22 @@ class SyntaxMappingDataset(Dataset):
     def __getitem__(self, index):
         return self.samplePairs[index]
 
-    def generateLabel(self, decode_level, n_ary):
+    def _generateLabel(self, decode_level, n_ary):
         '''Add label to each sample in self.syntaxPairs
         '''
-        def dfs(root, sample, level):
+        self.counts = [[0 for i in range(len(self.symbols))] for j in range(decode_level)]
 
-            if level and root in sample['syntax']:
+        def reduceLevel(node_levels, decode_level):
+            node_levels = torch.tensor(node_levels, dtype=torch.long)
+            new_level = []
+            for l in range(decode_level):
+                new_level.append((node_levels==l).nonzero().flatten())
+
+            return new_level
+
+        def dfs(root, sample, level, decode_level):
+
+            if level < decode_level and root in sample['syntax']:
 
                 for child in sample['syntax'][root]:
                     child = re.sub(r"-\d+", '', child)
@@ -69,21 +83,31 @@ class SyntaxMappingDataset(Dataset):
                         raise Exception("Child symbol {} is not in the setting.".format(child))
 
                     sample["label"].append(self.symbolIndex[child])
+                    sample["level"].append(level)
+                    self.counts[level][self.symbolIndex[child]] += 1
 
                 diff = n_ary - len(sample['syntax'][root])
                 for i in range(diff):
                     sample["label"].append(self.symbolIndex["[END]"])
+                    sample["level"].append(level)
+                    self.counts[level][self.symbolIndex['[END]']] += 1
+
 
                 for child in sample["syntax"][root]:
-                    dfs(child, sample, level-1)
+                    dfs(child, sample, level+1, decode_level)
 
-        for samplepair in self.samplePairs:
+        for samplePair in self.samplePairs:
 
-            dfs('ROOT', samplepair["source"], decode_level)
-            dfs('ROOT', samplepair["reference"], decode_level)
+            dfs('ROOT', samplePair["source"], 0, decode_level)
+            dfs('ROOT', samplePair["reference"], 0, decode_level)
 
-            samplepair["source"]["label"] = torch.tensor(samplepair["source"]["label"], dtype=torch.long)
-            samplepair["reference"]["label"] = torch.tensor(samplepair["reference"]["label"], dtype=torch.long)
+            samplePair["source"]["label"] = torch.tensor(samplePair["source"]["label"], dtype=torch.long)
+            samplePair["reference"]["label"] = torch.tensor(samplePair["reference"]["label"], dtype=torch.long)
+
+            samplePair["source"]["level"] = reduceLevel(samplePair["source"]["level"], decode_level)
+            samplePair["reference"]["level"] = reduceLevel(samplePair["reference"]["level"], decode_level)
+
+
     
     def collate_fn(self, samples):
         return samples

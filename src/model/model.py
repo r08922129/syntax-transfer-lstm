@@ -164,6 +164,7 @@ class SyntaxTransferDecoder(nn.Module):
             attention = torch.sum(attention * V, dim = 1) # (batch, hidden)
             h = torch.cat([h, attention], dim=1)
             h = self.linear(h)
+
             for i in range(self.n_ary):
                 position = torch.tensor(i).to(self.n_ary_position_embeddings.weight.device)
                 position_embedding = self.n_ary_position_embeddings(position)
@@ -192,8 +193,8 @@ class SyntaxTransferEncoderDecoder(nn.Module):
         for weight in self.decoder.parameters():
             nn.init.uniform_(weight, -sqrt(1/hidden_dim), sqrt(1/hidden_dim))
 
-        # for param in self.encoder.parameters():
-        #     param.requires_grad_(False)
+        for param in self.encoder.parameters():
+            param.requires_grad_(False)
 
     def forward(self, source_syntax, target_syntax):
 
