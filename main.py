@@ -149,7 +149,7 @@ def train(model, train_dataloader, val_dataloader, optimizer,
         if i % eval_point == 0:
             print("\nStart evaluation...\n")
             eval_acc = evaluate(model, val_dataloader, n_ary, decode_level, criteriaOfEachLevel)
-            path = os.path.join(save_path, "model_{}_{}_{}.pt".format(iteration, i/eval_point, eval_acc))
+            path = os.path.join(save_path, "model_{}_{}_{:.3f}.pt".format(iteration, i/eval_point, eval_acc))
             torch.save(model.state_dict(), path)
 
     print("Training Accuracy: {}".format(total_acc/len(train_dataloader.dataset)))
@@ -174,7 +174,7 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    cuda = torch.device('cpu')
+    cuda = torch.device('cuda')
 
     total_symbols = loadSymbols("save/symbols")
     # build dataset
@@ -215,6 +215,10 @@ if __name__ == "__main__":
         ).to(cuda)
     params = [p for p in model.parameters() if p.requires_grad]
     optimizer = torch.optim.Adam(params, lr=args.learning_rate)
+
+    if args.save_path:
+        if not os.path.isdir(args.save_path):
+            os.makedirs(args.save_path)
 
     if args.load_path:
         model.load_state_dict(torch.load(args.load_path))
