@@ -123,8 +123,8 @@ def train(model, train_dataloader, val_dataloader, optimizer,
         optimizer.zero_grad()
         loss = 0
         acc = 0
+
         for j, sample in enumerate(batch):
-    
             # source to reference
             output = model(sample["source"]["syntax"], sample["reference"]["syntax"])
             output = output.view(-1, output.size(2))

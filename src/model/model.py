@@ -69,7 +69,7 @@ class SyntaxTransferEncoder(nn.Module):
         self.c0_bottom_up = nn.Parameter(torch.rand(1, n_ary * hidden_dim)).requires_grad_()
         
         
-        self.TreeLSTMCell = TreeLSTMCell(embedding_dim, hidden_dim)
+        self.TreeLSTMCell = TreeLSTMCell(embedding_dim, hidden_dim, n_ary)
         self.ChildHiddenTransform = nn.Linear(hidden_dim*n_ary, hidden_dim)
 
     def forward(self, syntax, embeddings, bottom_up = True):
@@ -182,7 +182,7 @@ class SyntaxTransferEncoderDecoder(nn.Module):
 
         self.decode_level = decode_level
         self.embeddings = SymbolEmbedding(symbols, embedding_dim)
-        self.encoder = SyntaxTransferEncoder(embedding_dim, hidden_dim)
+        self.encoder = SyntaxTransferEncoder(embedding_dim, hidden_dim, n_ary)
         self.decoder = SyntaxTransferDecoder(embedding_dim, hidden_dim, n_ary, level=decode_level)
         self.linear = nn.Linear(hidden_dim, len(symbols))
 
