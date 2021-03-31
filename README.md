@@ -1,6 +1,8 @@
 # Remove terminal words in the output of CoreNLP and reduce the level of each tree.
 eg.
+
 `python -m src.utils.preprocess --reduce_tree --reduce_level=4 --reduce_output=output_trees < parse_trees`
+
 content of parse_trees
 ```
 {"ROOT": ["SQ-1"], "SQ-1": ["VBZ-1", "NP-1", "FRAG-1", ".-1"], "NP-1": ["EX-1"], "FRAG-1": ["NP-2",
@@ -10,6 +12,7 @@ content of parse_trees
 `python -m src.utils.preprocess < dataset_files > output_symbols`
 
 content of `dataset_files`
+
 eg.
 ```
 syntax_data/QQPPos_small/train/src
