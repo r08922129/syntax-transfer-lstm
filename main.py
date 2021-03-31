@@ -159,6 +159,8 @@ def train(model, train_dataloader, val_dataloader, optimizer,
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
+    parser.add_argument("dataset")
+    parser.add_argument("symbols")
     parser.add_argument("--iterations", type=int, default=3)
     parser.add_argument("--batch_size", type=int, default=32)
     parser.add_argument("--end_symbol_weight", type=float, default=0.25)
@@ -178,25 +180,25 @@ if __name__ == "__main__":
 
     cuda = torch.device('cuda')
 
-    total_symbols = loadSymbols("save/symbols")
+    total_symbols = loadSymbols(args.symbols)
     # build dataset
     trainDataset = SyntaxMappingDataset(
-        pathToSource="syntax_data/QQPPos_small/train/src",
-        pathToReference="syntax_data/QQPPos_small/train/ref",
+        pathToSource=os.path.join(args.dataset, "train/src"),
+        pathToReference=os.path.join(args.dataset, "train/ref"),
         symbols=total_symbols,
         decode_level=args.decode_level,
         n_ary=args.n_ary,
     )
     valDataset = SyntaxMappingDataset(
-        pathToSource="syntax_data/QQPPos_small/val/src",
-        pathToReference="syntax_data/QQPPos_small/val/ref",
+        pathToSource=os.path.join(args.dataset, "val/src"),
+        pathToReference=os.path.join(args.dataset, "val/src"),
         symbols=total_symbols,
         decode_level=args.decode_level,
         n_ary=args.n_ary,
     )
     testDataset = SyntaxMappingDataset(
-        pathToSource="syntax_data/QQPPos_small/test/src",
-        pathToReference="syntax_data/QQPPos_small/test/ref",
+        pathToSource=os.path.join(args.dataset, "val/src"),
+        pathToReference=os.path.join(args.dataset, "val/src"),
         symbols=total_symbols,
         decode_level=args.decode_level,
         n_ary=args.n_ary,

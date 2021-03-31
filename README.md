@@ -9,7 +9,7 @@ content of parse_trees
 "WHNP-1", "NP-3"], "NP-2": ["DT-1", "NN-1"], "WHNP-1": ["WDT-1"], "NP-3": ["JJ-1", "NNS-1", "NN-2"]}
 ```
 # Collect symbols from corpus
-`python -m src.utils.preprocess < dataset_files > output_symbols`
+`python -m src.utils.preprocess --collect_symbol <  dataset_files > symbols`
 
 content of `dataset_files`
 

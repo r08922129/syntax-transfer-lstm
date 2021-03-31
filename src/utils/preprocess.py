@@ -172,7 +172,7 @@ def collectSymbols(sample, cnf=False):
 
     return out
 
-def collectSymbolsFromDataset(outputFile, cnf=False):
+def collectSymbolsFromDataset(cnf=False):
 
     out = set()
     for file in sys.stdin.readlines():
@@ -182,11 +182,11 @@ def collectSymbolsFromDataset(outputFile, cnf=False):
                 sample = json.loads(line)
                 out.update(collectSymbols(sample, cnf))
 
-    with open(outputFile, "w") as f:
-        f.write("[END]\n")
-        f.write("ROOT\n")
-        for i, symbol in enumerate(list(out), 1):
-            f.write("{}\n".format(symbol))
+    print("[END]")
+    print("ROOT")
+    for symbol in list(out):
+        print(symbol)
+
     return list(out)
 
 
@@ -194,7 +194,6 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--collect_symbol", action="store_true")
-    parser.add_argument("--symbol_output")
 
     parser.add_argument("--reduce_tree", action="store_true")
     parser.add_argument("--reduce_level", type=int)
@@ -212,4 +211,4 @@ if __name__ == "__main__":
 
     # generate set of symbols
     if args.collect_symbol:
-        collectSymbolsFromDataset(args.symbol_output)
+        collectSymbolsFromDataset()
