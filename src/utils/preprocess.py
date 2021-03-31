@@ -7,6 +7,27 @@ from functools import reduce
 import re
 import argparse
 
+def computeLevel(files):
+    
+    def dfs(node, tree, level):
+        
+        if node not in tree:
+            return level
+        else:
+            max_level = level
+            for child in tree[node]:
+                max_level = max(max_level, dfs(child, tree, level+1))
+            return max_level
+    
+    out = []
+    for file in files:
+        with open(file) as f:
+            for line in f.readlines():
+                tree = json.loads(line)
+                level = dfs('ROOT', tree, 0)
+                out.append(level)
+    return out
+
 def reduceTree(output, level=None):
     '''If level is None, return full tree without terminal words'''
     out = []
