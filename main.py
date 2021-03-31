@@ -118,6 +118,7 @@ def train(model, train_dataloader, val_dataloader, optimizer,
     eval_point = int(eval_point * total_batch)
     total_acc = 0
     for i, batch in enumerate(train_dataloader):
+
         batch_size = len(batch)
         optimizer.zero_grad()
         loss = 0
@@ -152,12 +153,13 @@ def train(model, train_dataloader, val_dataloader, optimizer,
             path = os.path.join(save_path, "model_{}_{}_{:.3f}.pt".format(iteration, i/eval_point, eval_acc))
             torch.save(model.state_dict(), path)
 
+
     print("Training Accuracy: {}".format(total_acc/len(train_dataloader.dataset)))
 
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--iterations", type=int, default=5)
+    parser.add_argument("--iterations", type=int, default=3)
     parser.add_argument("--batch_size", type=int, default=32)
     parser.add_argument("--end_symbol_weight", type=float, default=0.25)
     parser.add_argument("--decode_level", type=int, default=2)
@@ -232,5 +234,3 @@ if __name__ == "__main__":
     
     if args.evaluate:
         evaluate(model, val_dataloader, args.n_ary, args.decode_level, criteriaOfEachLevel, printResult=True)
-
-    # evaluate(model, test_dataloader, args.n_ary, args.decode_level)

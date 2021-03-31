@@ -5,9 +5,8 @@ preprocess.ipynb
 split_data.ipynb
 Untitled.ipynb
 src/__pycache__/
-src/utils/__pycache__/
 save
 symbol_file
 syntax_data
 save/symbols
-src/model/__pycache__/
+
