@@ -28,6 +28,30 @@ def computeLevel(files):
                 out.append(level)
     return out
 
+def computeMaxBandWidth(source, reference):
+    
+    def dfs(node, tree):
+        
+        if node in tree:
+            max_band = len(tree[node])
+            for child in tree[node]:
+                max_band = max(max_band, dfs(child, tree))
+            return max_band
+        else:
+            return 0
+        
+    return max(dfs('ROOT', source), dfs('ROOT', reference))
+
+def computeMaxBandWidthFromDataset(sourceFile, referenceFile):
+    
+    maxwidth = []
+    with open(sourceFile) as srcFile, open(referenceFile) as refFile:
+        for src, ref in zip(srcFile.readlines(), refFile.readlines()):
+            src = json.loads(src)
+            ref = json.loads(ref)
+            maxwidth.append(computeMaxBandWidth(src, ref))
+    return maxwidth
+
 def reduceTree(output, level=None):
     '''If level is None, return full tree without terminal words'''
     out = []
