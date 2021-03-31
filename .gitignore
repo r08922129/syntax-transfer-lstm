@@ -9,4 +9,4 @@ save
 symbol_file
 syntax_data
 save/symbols
-
+__pycache__/
