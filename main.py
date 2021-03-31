@@ -166,7 +166,7 @@ if __name__ == "__main__":
     parser.add_argument("--end_symbol_weight", type=float, default=0.25)
     parser.add_argument("--decode_level", type=int, default=2)
     parser.add_argument("--n_ary", type=int, default=4)
-    parser.add_argument("--eval_point", type=float, default=0.1)
+    parser.add_argument("--eval_point", type=float, default=0.25)
     parser.add_argument("--learning_rate", type=float, default=1e-5)
     parser.add_argument("--embedding_size", type=int,default=256)
     parser.add_argument("--hidden_size", type=float, default=256)
