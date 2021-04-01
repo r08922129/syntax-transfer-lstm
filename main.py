@@ -23,7 +23,8 @@ def computeLossByLevel(output, target, indexesEachLevel, criteriaOfEachLevel):
 
     loss = 0
     for level, indexes in enumerate(indexesEachLevel):
-        loss += criteriaOfEachLevel[level](output[indexes], target[indexes])
+        if indexesEachLevel[level].size(0):
+            loss += criteriaOfEachLevel[level](output[indexes], target[indexes])
     return loss
 
 def evaluate(model, dataloader, n_ary, decode_level, criteriaOfEachLevel, printResult=False):
