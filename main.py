@@ -171,7 +171,7 @@ if __name__ == "__main__":
     parser.add_argument("--learning_rate", type=float, default=1e-5)
     parser.add_argument("--embedding_size", type=int,default=256)
     parser.add_argument("--hidden_size", type=float, default=256)
-
+    parser.add_argument("--shuffle", action="store_true")
     parser.add_argument("--load_path", type=str, default=None)
     parser.add_argument("--train", action="store_true")
     parser.add_argument("--save_path", type=str, default=None)
@@ -204,7 +204,7 @@ if __name__ == "__main__":
         decode_level=args.decode_level,
         n_ary=args.n_ary,
     )
-    train_dataloader = DataLoader(trainDataset, batch_size=args.batch_size, collate_fn=trainDataset.collate_fn)
+    train_dataloader = DataLoader(trainDataset, batch_size=args.batch_size, collate_fn=trainDataset.collate_fn, shuffle=args.shuffle)
     val_dataloader = DataLoader(valDataset, batch_size=args.batch_size, collate_fn=valDataset.collate_fn)
     test_dataloader = DataLoader(testDataset, batch_size=args.batch_size, collate_fn=testDataset.collate_fn)
 
