@@ -173,7 +173,51 @@ class SyntaxTransferDecoder(nn.Module):
             for i, child in enumerate(syntax[node]):
                 self.dfsTopDown(child, syntax, encoder_hiddens, (h, c), embeddings, level-1, out)
 
-    
+
+    def forwardAndGetAttentionMap(self, syntax, encoder_hiddens, embeddings):
+        '''
+        Args:
+            encoder_hiddens = (encoder_h, encoder_c)
+            
+            shape:
+                encoder_h : (batch, num_nodes, hidden_dim)
+                encoder_c : (batch, num_nodes, hidden_dim)
+
+        '''
+        encoder_h, encoder_c = encoder_hiddens
+        out = []
+        att = []
+        self.dfsForwardAndGetAttentionMap("ROOT", syntax, encoder_h, (encoder_h[:,-1,:], encoder_c[:,-1,:]), embeddings, self.level, out, att)
+        out = torch.stack(out).transpose(0, 1)
+
+        return out, att
+
+    def dfsForwardAndGetAttentionMap(self, node, syntax, encoder_hiddens, last_hidden, embeddings, level, out, att):
+        
+        if level and node in syntax:
+
+            node_lemma = re.sub(r"-\d+", '', node)
+            node_embedding = embeddings.get_embedding(node_lemma).view(1, -1)
+            h, c = self.LSTMCell(node_embedding, last_hidden)
+            # h (batch, hidden)
+            q = self.W_q(h).unsqueeze(2) # (batch, hidden, 1)
+            K = self.W_k(encoder_hiddens) # (batch, seq, hidden)
+            V = self.W_v(encoder_hiddens) # (batch, seq, hidden)
+            attention = torch.softmax(torch.matmul(K, q), dim = 1)
+            att.append(attention.flatten())
+            attention = torch.sum(attention * V, dim = 1) # (batch, hidden)
+            h = torch.cat([h, attention], dim=1)
+            h = self.linear(h)
+
+            for i in range(self.n_ary):
+                position = torch.tensor(i).to(self.n_ary_position_embeddings.weight.device)
+                position_embedding = self.n_ary_position_embeddings(position)
+                out.append(h + position_embedding)
+
+            for i, child in enumerate(syntax[node]):
+                self.dfsForwardAndGetAttentionMap(child, syntax, encoder_hiddens, (h, c), embeddings, level-1, out, att)
+
+        
 class SyntaxTransferEncoderDecoder(nn.Module):
     
     def __init__(self, symbols, embedding_dim=256, hidden_dim=256, n_ary=4, decode_level=2):
@@ -213,3 +257,12 @@ class SyntaxTransferEncoderDecoder(nn.Module):
         hiddens = self.linear(hiddens) # (batch, number of nodes expanded * n_ary, number of symbols)
 
         return hiddens
+
+    def forwardAndGetAttentionMap(self, source_syntax, target_syntax):
+
+        h, c = self.encoder(source_syntax, self.embeddings)
+        hiddens, attentions = self.decoder.forwardAndGetAttentionMap(target_syntax, (h, c), self.embeddings)
+        hiddens = self.linear(hiddens) # (batch, number of nodes expanded * n_ary, number of symbols)
+
+        attentions = torch.stack(attentions)
+        return hiddens, attentions
