@@ -141,13 +141,15 @@ class SyntaxTransferDecoder(nn.Module):
         '''
         encoder_h, encoder_c = encoder_hiddens
         out = []
+
         self.dfsTopDown("ROOT", syntax, encoder_h, (encoder_h[:,-1,:], encoder_c[:,-1,:]), embeddings, self.level, out)
         out = torch.stack(out).transpose(0, 1)
 
         return out
 
     def dfsTopDown(self, node, syntax, encoder_hiddens, last_hidden, embeddings, level, out):
-        
+
+
         if level and node in syntax:
 
             node_lemma = re.sub(r"-\d+", '', node)
@@ -234,8 +236,8 @@ class SyntaxTransferEncoderDecoder(nn.Module):
         for weight in self.decoder.parameters():
             nn.init.uniform_(weight, -sqrt(1/hidden_dim), sqrt(1/hidden_dim))
 
-        for param in self.encoder.parameters():
-            param.requires_grad_(False)
+        # for param in self.encoder.parameters():
+        #     param.requires_grad_(False)
 
     def forward(self, source_syntax, target_syntax):
 
