@@ -199,7 +199,7 @@ if __name__ == "__main__":
     )
     testDataset = SyntaxMappingDataset(
         pathToSource=os.path.join(args.dataset, "test/src"),
-        pathToReference=os.path.join(args.dataset, "test /ref"),
+        pathToReference=os.path.join(args.dataset, "test/ref"),
         symbols=total_symbols,
         decode_level=args.decode_level,
         n_ary=args.n_ary,
