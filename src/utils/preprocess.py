@@ -7,7 +7,7 @@ from functools import reduce
 import re
 import argparse
 
-def computeLevel(files):
+def computeLevel(tree):
     
     def dfs(node, tree, level):
         
@@ -18,17 +18,10 @@ def computeLevel(files):
             for child in tree[node]:
                 max_level = max(max_level, dfs(child, tree, level+1))
             return max_level
-    
-    out = []
-    for file in files:
-        with open(file) as f:
-            for line in f.readlines():
-                tree = json.loads(line)
-                level = dfs('ROOT', tree, 0)
-                out.append(level)
-    return out
 
-def computeMaxBandWidth(source, reference):
+    return dfs('ROOT', tree, 0)
+
+def computeBandWidth(tree):
     
     def dfs(node, tree):
         
@@ -40,46 +33,21 @@ def computeMaxBandWidth(source, reference):
         else:
             return 0
         
-    return max(dfs('ROOT', source), dfs('ROOT', reference))
+    return dfs('ROOT', tree)
 
-def computeMaxBandWidthFromDataset(sourceFile, referenceFile):
-    
-    maxwidth = []
-    with open(sourceFile) as srcFile, open(referenceFile) as refFile:
-        for src, ref in zip(srcFile.readlines(), refFile.readlines()):
-            src = json.loads(src)
-            ref = json.loads(ref)
-            maxwidth.append(computeMaxBandWidth(src, ref))
-    return maxwidth
-
-def reduceTree(output, level=None):
-    '''If level is None, return full tree without terminal words'''
+def reduceSampleBandWidth(source_file, reference_file, max_bandwidth):
+    '''
+    Return:
+        out: List of tuple of source and reference tree
+    '''
     out = []
-    for line in sys.stdin.readlines():
-        sample = preprocessCoreNLPTree(json.loads(line))
-
-        if level:
-            sample = reduceTreeLevel(sample, level)
-
-        out.append(json.dumps(sample)+'\n')
-
-    with open(output, 'w') as f:
-        f.writelines(out)
-
-def reduceTreeLevel(sample, level):
-    
-    def dfs(root, sample, out, level):
-
-        if level and root in sample:
-            out[root] = []
-            for child in sample[root]:
-                out[root].append(child)
-                dfs(child, sample, out, level-1)
-
-    new_sample = {}
-    dfs("ROOT", sample, new_sample, level)
-    return new_sample
-
+    for source, reference in zip(source_file.readlines(), reference_file.readlines()):
+        source, reference = json.loads(source), json.loads(reference)
+        
+        bandwidth = max(computeBandWidth(source), computeBandWidth(reference))
+        if bandwidth <= max_bandwidth:
+            out.append((source, reference))
+    return out
     
 def preprocessCoreNLPTree(mapping):
 
@@ -193,22 +161,33 @@ def collectSymbolsFromDataset(cnf=False):
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
+    parser.add_argument("--remove_terminal", action="store_true")
     parser.add_argument("--collect_symbol", action="store_true")
 
-    parser.add_argument("--reduce_tree", action="store_true")
-    parser.add_argument("--reduce_level", type=int)
-    parser.add_argument("--reduce_output")
+    # reduce bandwidth
+    parser.add_argument("--reduce_bandwidth", action="store_true")
+    parser.add_argument("--source_file", type=str)
+    parser.add_argument("--reference_file", type=str)
+    parser.add_argument("--source_output", type=str)
+    parser.add_argument("--reference_output", type=str)
+    parser.add_argument("--max_bandwidth", type=int)
 
     args = parser.parse_args()
+
+    if args.reduce_bandwidth:
+        with open(args.source_file) as source_file, open(args.reference_file) as reference_file:
+            out = reduceSampleBandWidth(source_file, reference_file, args.max_bandwidth)
+        with open(args.source_output, 'w') as source_output, open(args.reference_output, 'w') as reference_output:
+            for source, reference in out:
+                source_output.write(json.dumps(source)+'\n')
+                reference_output.write(json.dumps(reference)+'\n')
+
     # remove terminal words
-    # args:
-    # 
-    if args.reduce_tree:
-        if args.reduce_level:
-            reduceTree(args.reduce_output, args.reduce_level)
-        else:
-            reduceTree(args.reduce_output)
+    elif args.remove_terminal:
+        for line in sys.stdin.readlines():
+            sample = json.loads(line)
+            print(json.dumps(preprocessCoreNLPTree(sample)))
 
     # generate set of symbols
-    if args.collect_symbol:
+    elif args.collect_symbol:
         collectSymbolsFromDataset()

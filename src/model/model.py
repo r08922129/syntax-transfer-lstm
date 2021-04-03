@@ -77,9 +77,6 @@ class SyntaxTransferEncoder(nn.Module):
         out_h, out_c = [], []
         if bottom_up:
             h, c = self.dfsBottomUp("ROOT", syntax, embeddings, out_h, out_c)
-            out_h.append(h)
-            out_c.append(c)
-
         
         out_h = torch.stack(out_h).transpose(0, 1)
         out_c = torch.stack(out_c).transpose(0, 1)
