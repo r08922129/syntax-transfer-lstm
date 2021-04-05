@@ -236,9 +236,6 @@ class SyntaxTransferEncoderDecoder(nn.Module):
         for weight in self.decoder.parameters():
             nn.init.uniform_(weight, -sqrt(1/hidden_dim), sqrt(1/hidden_dim))
 
-        for param in self.encoder.parameters():
-            param.requires_grad_(False)
-
     def forward(self, source_syntax, target_syntax):
 
         '''
